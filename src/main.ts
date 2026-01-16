@@ -478,11 +478,11 @@ const renderSubtasksInModal = (task: Task) => {
 
   (task.subtasks || []).forEach(sub => {
     const li = document.createElement('li');
-    li.className = 'subtask-item';
+    li.className = `subtask-item ${sub.completed ? 'completed' : ''}`;
     li.innerHTML = `
-            <input type="checkbox" ${sub.completed ? 'checked' : ''} data-id="${sub.id}">
-            <span style="flex:1; text-decoration: ${sub.completed ? 'line-through' : 'none'}; color: ${sub.completed ? 'var(--text-secondary)' : 'inherit'}">${sub.title}</span>
-            <button type="button" class="delete-subtask-btn" data-id="${sub.id}" style="background:none; border:none; color:var(--danger-color); cursor:pointer;">&times;</button>
+            <input type="checkbox" class="subtask-checkbox" ${sub.completed ? 'checked' : ''} data-id="${sub.id}">
+            <span class="subtask-text">${sub.title}</span>
+            <button type="button" class="delete-subtask-btn" data-id="${sub.id}">&times;</button>
         `;
 
     // Toggle Subtask
