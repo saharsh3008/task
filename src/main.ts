@@ -1,6 +1,6 @@
 
 import './style.css';
-import { TaskStore, Task } from './store';
+import { TaskStore, type Task } from './store';
 
 // Initialize Store
 let store: TaskStore = null!;
