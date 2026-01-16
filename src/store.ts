@@ -73,10 +73,18 @@ export class TaskStore {
         return this.tasks.find(t => t.id === id);
     }
 
+    // Helper for generating IDs
+    private generateId(): string {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
+
     addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completed'>): Task {
         const newTask: Task = {
             ...task,
-            id: crypto.randomUUID(),
+            id: this.generateId(),
             completed: false,
             createdAt: Date.now(),
             updatedAt: Date.now()
@@ -124,7 +132,7 @@ export class TaskStore {
 
     addList(name: string, color: string = '#64748b'): TaskList {
         const newList: TaskList = {
-            id: crypto.randomUUID(),
+            id: this.generateId(),
             name,
             color
         };
