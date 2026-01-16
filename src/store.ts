@@ -1,5 +1,12 @@
 
 export type Priority = 'low' | 'medium' | 'high';
+export type Recurrence = 'daily' | 'weekly' | 'monthly' | 'none';
+
+export interface Subtask {
+    id: string;
+    title: string;
+    completed: boolean;
+}
 
 export interface Task {
     id: string;
@@ -10,6 +17,8 @@ export interface Task {
     dueDate?: number; // timestamp
     completedAt?: number; // timestamp
     reminder?: number; // timestamp
+    recurrence?: Recurrence;
+    subtasks?: Subtask[];
     listId: string;
     createdAt: number;
     updatedAt: number;
@@ -39,30 +48,51 @@ export class TaskStore {
 
     // --- Tasks ---
 
-    getTasks(filter?: { listId?: string; view?: 'today' | 'upcoming' | 'all' }): Task[] {
-        let result = [...this.tasks];
+    getTasks(filter?: { listId?: string, view?: 'all' | 'today' | 'upcoming', search?: string }): Task[] {
+        let filtered = [...this.tasks];
 
+        // Basic List Filter
         if (filter?.listId) {
-            result = result.filter(t => t.listId === filter.listId);
+            filtered = filtered.filter(t => t.listId === filter.listId);
         }
 
+        // Smart Search / Text Filter
+        if (filter?.search) {
+            const query = filter.search.toLowerCase();
+
+            // Smart Filters
+            const priorityMatch = query.match(/priority:(low|medium|high)/);
+            const isDoneMatch = query.match(/is:done/);
+            const isPendingMatch = query.match(/is:pending/);
+
+            if (priorityMatch) {
+                filtered = filtered.filter(t => t.priority === priorityMatch[1]);
+            } else if (isDoneMatch) {
+                filtered = filtered.filter(t => t.completed);
+            } else if (isPendingMatch) {
+                filtered = filtered.filter(t => !t.completed);
+            } else {
+                // Normal text search
+                filtered = filtered.filter(t =>
+                    t.title.toLowerCase().includes(query) ||
+                    (t.description || '').toLowerCase().includes(query)
+                );
+            }
+        }
+
+        // View Filters (Date logic)
         if (filter?.view === 'today') {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            result = result.filter(t => t.dueDate && t.dueDate >= today.getTime() && t.dueDate < tomorrow.getTime());
+            const today = new Date().setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today + 86400000).getTime();
+            filtered = filtered.filter(t => t.dueDate && t.dueDate >= today && t.dueDate < tomorrow);
         } else if (filter?.view === 'upcoming') {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            result = result.filter(t => t.dueDate && t.dueDate >= today.getTime());
+            const today = new Date().setHours(0, 0, 0, 0);
+            filtered = filtered.filter(t => t.dueDate && t.dueDate >= today);
         }
 
-        return result.sort((a, b) => {
+        return filtered.sort((a, b) => {
             // Sort by completion (completed last), then priority (high first), then date
             if (a.completed !== b.completed) return a.completed ? 1 : -1;
-            // Priority map
             const pMap = { high: 3, medium: 2, low: 1 };
             if (pMap[a.priority] !== pMap[b.priority]) return pMap[b.priority] - pMap[a.priority];
             return b.createdAt - a.createdAt;
@@ -117,10 +147,64 @@ export class TaskStore {
         const task = this.getTask(id);
         if (task) {
             const isCompleted = !task.completed;
+
+            // Handle Recurrence on Completion
+            if (isCompleted && task.recurrence && task.recurrence !== 'none') {
+                this.handleRecurrence(task);
+            }
+
             this.updateTask(id, {
                 completed: isCompleted,
                 completedAt: isCompleted ? Date.now() : undefined
             });
+        }
+    }
+
+    private handleRecurrence(task: Task) {
+        if (!task.dueDate) return;
+
+        let nextDate = new Date(task.dueDate);
+        if (task.recurrence === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+        if (task.recurrence === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+        if (task.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+
+        // Clone task
+        this.addTask({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            listId: task.listId,
+            dueDate: nextDate.getTime(),
+            recurrence: task.recurrence,
+            subtasks: task.subtasks?.map(s => ({ ...s, completed: false })) // Reset subtasks
+        });
+    }
+
+    // Subtask Management
+    addSubtask(taskId: string, title: string) {
+        const task = this.getTask(taskId);
+        if (task) {
+            const subtasks = task.subtasks || [];
+            subtasks.push({ id: this.generateId(), title, completed: false });
+            this.updateTask(taskId, { subtasks });
+        }
+    }
+
+    toggleSubtask(taskId: string, subtaskId: string) {
+        const task = this.getTask(taskId);
+        if (task && task.subtasks) {
+            const subtasks = task.subtasks.map(s =>
+                s.id === subtaskId ? { ...s, completed: !s.completed } : s
+            );
+            this.updateTask(taskId, { subtasks });
+        }
+    }
+
+    deleteSubtask(taskId: string, subtaskId: string) {
+        const task = this.getTask(taskId);
+        if (task && task.subtasks) {
+            const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+            this.updateTask(taskId, { subtasks });
         }
     }
 

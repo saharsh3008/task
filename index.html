@@ -138,6 +138,28 @@
             </div>
 
             <div class="form-group">
+              <label for="editRecurrence">Recurrence</label>
+              <select id="editRecurrence" name="recurrence">
+                <option value="none">None</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
+            <!-- Subtasks Section -->
+            <div class="subtasks-section">
+              <div class="subtasks-header">Subtasks</div>
+              <ul id="editSubtasksList" class="subtask-list">
+                <!-- Injected by JS -->
+              </ul>
+              <div class="subtask-input-group">
+                <input type="text" id="newSubtaskInput" placeholder="Add subtask..." />
+                <button type="button" id="addSubtaskBtn" class="primary-btn" style="padding: 0.25rem 0.5rem;">+</button>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label for="editList">List</label>
               <select id="editList" name="listId">
                 <!-- Populated by JS -->

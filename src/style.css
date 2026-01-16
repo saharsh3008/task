@@ -613,3 +613,73 @@ body {
   align-items: center;
   gap: 4px;
 }
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.progress-bar-bg {
+    flex: 1;
+    height: 4px;
+    background-color: var(--border-color);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--success-color);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+/* Recurrence Icon */
+.recurrence-icon {
+    font-size: 0.8rem;
+    margin-right: 0.25rem;
+}
+
+/* Subtasks in Modal */
+.subtasks-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.subtasks-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.subtask-list {
+    list-style: none;
+    margin-bottom: 0.5rem;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.subtask-input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.subtask-input-group input {
+    flex: 1;
+}
+
