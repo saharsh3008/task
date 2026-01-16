@@ -4,7 +4,13 @@ import { TaskStore } from './store';
 import type { Task } from './store';
 
 // Initialize Store
-const store = new TaskStore();
+let store: TaskStore;
+try {
+  store = new TaskStore();
+} catch (e) {
+  console.error('Failed to initialize store', e);
+  alert('Critical Error: Failed to initialize application data. Please check console.');
+}
 
 // State for UI
 let currentView: 'all' | 'today' | 'upcoming' | 'date-view' = 'all';
@@ -469,4 +475,9 @@ const setupEventListeners = () => {
   });
 };
 
-init();
+// Wrap init
+try {
+  if (store) init();
+} catch (e) {
+  console.error('Failed to initialize app', e);
+}

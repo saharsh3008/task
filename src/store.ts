@@ -156,8 +156,12 @@ export class TaskStore {
     // --- Persistence ---
 
     private save() {
-        localStorage.setItem(this.TASKS_KEY, JSON.stringify(this.tasks));
-        localStorage.setItem(this.LISTS_KEY, JSON.stringify(this.lists));
+        try {
+            localStorage.setItem(this.TASKS_KEY, JSON.stringify(this.tasks));
+            localStorage.setItem(this.LISTS_KEY, JSON.stringify(this.lists));
+        } catch (e) {
+            console.error('Failed to save to localStorage', e);
+        }
     }
 
     private load() {
