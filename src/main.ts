@@ -1,176 +1,306 @@
+
 import './style.css';
+import { TaskStore } from './store';
+import type { Task } from './store';
 
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
-}
+// Initialize Store
+const store = new TaskStore();
 
-// State
-let tasks: Task[] = [];
-let filter: 'all' | 'active' | 'completed' = 'all';
+// State for UI
+let currentView: 'all' | 'today' | 'upcoming' = 'all';
+let currentListId: string | undefined = undefined;
 
 // DOM Elements
-const taskList = document.getElementById('taskList') as HTMLUListElement;
-const taskInput = document.getElementById('taskInput') as HTMLInputElement;
-const addTaskBtn = document.getElementById('addTaskBtn') as HTMLButtonElement;
-const itemsLeft = document.getElementById('itemsLeft') as HTMLSpanElement;
-const dateDisplay = document.getElementById('dateDisplay') as HTMLParagraphElement;
-const filterBtns = document.querySelectorAll('.filter-btn');
 
-// Initialization
+const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
+const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+
+const navBtns = document.querySelectorAll('.nav-btn');
+const customListsContainer = document.getElementById('customLists') as HTMLDivElement;
+const addListBtn = document.getElementById('addListBtn') as HTMLButtonElement;
+
+const currentViewTitle = document.getElementById('currentViewTitle') as HTMLHeadingElement;
+const currentDate = document.getElementById('currentDate') as HTMLParagraphElement;
+const sortSelect = document.getElementById('sortSelect') as HTMLSelectElement;
+
+const quickTaskInput = document.getElementById('quickTaskInput') as HTMLInputElement;
+const quickPriority = document.getElementById('quickPriority') as HTMLSelectElement;
+const quickAddBtn = document.getElementById('quickAddBtn') as HTMLButtonElement;
+
+const taskList = document.getElementById('taskList') as HTMLUListElement;
+
+const taskModal = document.getElementById('taskModal') as HTMLDialogElement;
+const closeModalBtn = document.getElementById('closeModalBtn') as HTMLButtonElement;
+const editTaskForm = document.getElementById('editTaskForm') as HTMLFormElement;
+const deleteTaskBtn = document.getElementById('deleteTaskBtn') as HTMLButtonElement;
+
+// --- Initialization ---
+
 const init = () => {
-  loadTasks();
+  setupTheme();
   updateDate();
-  render();
+  renderLists();
+  renderTasks();
   setupEventListeners();
 };
 
 const updateDate = () => {
   const date = new Date();
-  const options: Intl.DateTimeFormatOptions = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  };
-  if (dateDisplay) {
-    dateDisplay.textContent = date.toLocaleDateString('en-US', options);
-  }
+  currentDate.textContent = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 };
 
-const setupEventListeners = () => {
-  addTaskBtn.addEventListener('click', handleAddTask);
-  
-  taskInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      handleAddTask();
-    }
-  });
+// --- Theme ---
 
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.target as HTMLButtonElement;
-      filter = target.dataset.filter as 'all' | 'active' | 'completed';
-      
-      // Update active class
-      filterBtns.forEach(b => b.classList.remove('active'));
-      target.classList.add('active');
-      
-      render();
+const setupTheme = () => {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+  });
+};
+
+const updateThemeIcon = (theme: string) => {
+  themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+};
+
+// --- Rendering ---
+
+const renderLists = () => {
+  customListsContainer.innerHTML = '';
+  const lists = store.getLists().filter(l => !l.isSystem);
+
+  lists.forEach(list => {
+    const div = document.createElement('div');
+    div.className = `nav-btn ${currentListId === list.id ? 'active' : ''}`;
+    div.innerHTML = `
+            <span class="list-dot" style="background-color: ${list.color}"></span>
+            ${list.name}
+            <button class="delete-list-btn" aria-label="Delete list" style="margin-left: auto; opacity: 0.5;">&times;</button>
+        `;
+    div.addEventListener('click', (e) => {
+      // Handle delete click
+      if ((e.target as HTMLElement).classList.contains('delete-list-btn')) {
+        e.stopPropagation();
+        if (confirm(`Delete list "${list.name}"?`)) {
+          store.deleteList(list.id);
+          if (currentListId === list.id) {
+            currentListId = undefined;
+            currentView = 'all';
+            updateViewHeader();
+          }
+          renderLists();
+          renderTasks();
+        }
+        return;
+      }
+
+      currentListId = list.id;
+      currentView = 'all'; // Reset view to show this list
+      updateViewHeader(list.name);
+      renderLists();
+      renderTasks();
     });
+    customListsContainer.appendChild(div);
   });
 };
 
-const handleAddTask = () => {
-  const text = taskInput.value.trim();
-  if (text) {
-    addTask(text);
-    taskInput.value = '';
-    taskInput.focus();
+const updateViewHeader = (title?: string) => {
+  if (title) {
+    currentViewTitle.textContent = title;
+  } else {
+    if (currentView === 'all') currentViewTitle.textContent = 'All Tasks';
+    if (currentView === 'today') currentViewTitle.textContent = 'Today';
+    if (currentView === 'upcoming') currentViewTitle.textContent = 'Upcoming';
+  }
+
+  // Update active class on nav
+  navBtns.forEach(btn => btn.classList.remove('active'));
+  if (!currentListId) {
+    const activeBtn = document.querySelector(`[data-view="${currentView}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
   }
 };
 
-const addTask = (text: string) => {
-  const task: Task = {
-    id: crypto.randomUUID(),
-    text,
-    completed: false,
-    createdAt: Date.now()
-  };
-  tasks.unshift(task); // Add to top
-  saveTasks();
-  render();
-};
-
-const toggleTask = (id: string) => {
-  tasks = tasks.map(t => 
-    t.id === id ? { ...t, completed: !t.completed } : t
-  );
-  saveTasks();
-  render();
-};
-
-const deleteTask = (id: string) => {
-  // Add fade-out animation logic if desired, but for simplicity we just remove
-  // To animate removal propery, we'd need to delay the state update.
-  const el = document.querySelector(`[data-id="${id}"]`);
-  if (el) {
-    el.classList.add('removing'); // We can add a class for removal animation
-    // But since we confirm simplicity, we'll just remove.
-  }
-  
-  tasks = tasks.filter(t => t.id !== id);
-  saveTasks();
-  render();
-};
-
-const saveTasks = () => {
-  localStorage.setItem('premium-todo-tasks', JSON.stringify(tasks));
-};
-
-const loadTasks = () => {
-  const stored = localStorage.getItem('premium-todo-tasks');
-  if (stored) {
-    try {
-      tasks = JSON.parse(stored);
-    } catch (e) {
-      console.error('Failed to parse tasks', e);
-      tasks = [];
-    }
-  }
-};
-
-const render = () => {
-  // Filter tasks
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'active') return !task.completed;
-    if (filter === 'completed') return task.completed;
-    return true;
+const renderTasks = () => {
+  const tasks = store.getTasks({
+    listId: currentListId,
+    view: currentListId ? undefined : currentView
   });
 
-  // Clear list
+  // Apply sort logic from select if needed (Store has default sort, but we can override or re-sort here)
+  const sortVal = sortSelect.value;
+  if (sortVal === 'priority') {
+    const pMap = { high: 3, medium: 2, low: 1 };
+    tasks.sort((a, b) => pMap[b.priority] - pMap[a.priority]);
+  } else if (sortVal === 'due') {
+    tasks.sort((a, b) => (a.dueDate || Infinity) - (b.dueDate || Infinity));
+  }
+  // 'created' is default in store
+
+  const searchQuery = searchInput.value.toLowerCase();
+  const filtered = tasks.filter(t => t.title.toLowerCase().includes(searchQuery));
+
   taskList.innerHTML = '';
 
-  if (filteredTasks.length === 0) {
-    taskList.innerHTML = `<li class="empty-state">No ${filter === 'all' ? '' : filter} tasks found</li>`;
-  } else {
-    filteredTasks.forEach(task => {
-      const li = document.createElement('li');
-      li.className = `task-item ${task.completed ? 'completed' : ''}`;
-      li.dataset.id = task.id;
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'task-checkbox';
-      checkbox.checked = task.completed;
-      checkbox.addEventListener('change', () => toggleTask(task.id));
-
-      const span = document.createElement('span');
-      span.className = 'task-text';
-      span.textContent = task.text;
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'delete-btn';
-      deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-      deleteBtn.ariaLabel = 'Delete task';
-      deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deleteTask(task.id);
-      });
-
-      li.appendChild(checkbox);
-      li.appendChild(span);
-      li.appendChild(deleteBtn);
-      taskList.appendChild(li);
-    });
+  if (filtered.length === 0) {
+    taskList.innerHTML = `<li style="text-align:center; padding: 2rem; color: var(--text-secondary)">No tasks found</li>`;
+    return;
   }
 
-  // Update stats
-  const activeCount = tasks.filter(t => !t.completed).length;
-  itemsLeft.textContent = `${activeCount} item${activeCount !== 1 ? 's' : ''} left`;
+  filtered.forEach(task => {
+    const li = document.createElement('li');
+    li.className = `task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`;
+
+    li.innerHTML = `
+            <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}>
+            <div class="task-content">
+                <div class="task-title">${task.title}</div>
+                <div class="task-meta">
+                   ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : ''}
+                   ${task.description ? `<span>📄</span>` : ''}
+                </div>
+            </div>
+        `;
+
+    // Checkbox event
+    const checkbox = li.querySelector('.task-checkbox') as HTMLInputElement;
+    checkbox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      store.toggleTask(task.id);
+      renderTasks();
+    });
+
+    // Click to edit
+    li.addEventListener('click', () => openEditModal(task));
+
+    taskList.appendChild(li);
+  });
 };
 
-// Start
+// --- Actions ---
+
+const handleQuickAdd = () => {
+  const title = quickTaskInput.value.trim();
+  if (!title) return;
+
+  store.addTask({
+    title,
+    priority: quickPriority.value as any,
+    listId: currentListId || 'default',
+    // If view is 'today', set due date to today? Optional UX improvement
+  });
+
+  quickTaskInput.value = '';
+  renderTasks();
+};
+
+const openEditModal = (task: Task) => {
+  const form = editTaskForm;
+  (form.elements.namedItem('id') as HTMLInputElement).value = task.id;
+  (form.elements.namedItem('title') as HTMLInputElement).value = task.title;
+  (form.elements.namedItem('description') as HTMLTextAreaElement).value = task.description || '';
+  (form.elements.namedItem('priority') as HTMLSelectElement).value = task.priority;
+
+  const dateInput = form.elements.namedItem('dueDate') as HTMLInputElement;
+  if (task.dueDate) {
+    dateInput.valueAsNumber = task.dueDate; // Works if input type is date? No, needs YYYY-MM-DD
+    dateInput.value = new Date(task.dueDate).toISOString().split('T')[0];
+  } else {
+    dateInput.value = '';
+  }
+
+  // Populate Lists Select
+  const listSelect = form.elements.namedItem('listId') as HTMLSelectElement;
+  listSelect.innerHTML = '';
+  store.getLists().forEach(l => {
+    const option = document.createElement('option');
+    option.value = l.id;
+    option.textContent = l.name;
+    option.selected = l.id === task.listId;
+    listSelect.appendChild(option);
+  });
+
+  taskModal.showModal();
+};
+
+const handleEditSubmit = (e: Event) => {
+  e.preventDefault();
+  const formData = new FormData(editTaskForm);
+  const id = formData.get('id') as string;
+
+  // Parse date
+  const dateStr = formData.get('dueDate') as string;
+  const dueDate = dateStr ? new Date(dateStr).getTime() : undefined;
+
+  store.updateTask(id, {
+    title: formData.get('title') as string,
+    description: formData.get('description') as string,
+    priority: formData.get('priority') as any,
+    listId: formData.get('listId') as string,
+    dueDate
+  });
+
+  taskModal.close();
+  renderTasks();
+};
+
+const handleDeleteFromModal = () => {
+  const id = (editTaskForm.elements.namedItem('id') as HTMLInputElement).value;
+  if (confirm('Delete this task?')) {
+    store.deleteTask(id);
+    taskModal.close();
+    renderTasks();
+  }
+};
+
+// --- Event Listeners ---
+
+const setupEventListeners = () => {
+  // Nav
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentView = btn.getAttribute('data-view') as any;
+      currentListId = undefined;
+      updateViewHeader();
+      renderLists(); // Remove active state from lists
+      renderTasks();
+    });
+  });
+
+  // Lists
+  addListBtn.addEventListener('click', () => {
+    const name = prompt('List Name:');
+    if (name) {
+      store.addList(name);
+      renderLists();
+    }
+  });
+
+  // Quick Add
+  quickAddBtn.addEventListener('click', handleQuickAdd);
+  quickTaskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleQuickAdd();
+  });
+
+  // Search & Sort
+  searchInput.addEventListener('input', renderTasks);
+  sortSelect.addEventListener('change', renderTasks);
+
+  // Modal
+  closeModalBtn.addEventListener('click', () => taskModal.close());
+  editTaskForm.addEventListener('submit', handleEditSubmit);
+  deleteTaskBtn.addEventListener('click', handleDeleteFromModal);
+
+  // Close modal on click outside
+  taskModal.addEventListener('click', (e) => {
+    if (e.target === taskModal) taskModal.close();
+  });
+};
+
 init();

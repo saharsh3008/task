@@ -1,43 +1,146 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Premium To-Do</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Premium To-Do</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
   <body>
-    <div id="app" class="app-container">
-      <header class="app-header">
-        <h1>Tasks</h1>
-        <p class="date-display" id="dateDisplay"></p>
-      </header>
-      
-      <div class="input-group">
-        <input type="text" id="taskInput" placeholder="Add a new task..." aria-label="New task input" />
-        <button id="addTaskBtn" aria-label="Add task">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </button>
-      </div>
+    <div id="app" class="app-layout">
 
-      <div class="controls">
-        <div class="filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="active">Active</button>
-          <button class="filter-btn" data-filter="completed">Completed</button>
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <h2>Tasks</h2>
+          <button id="themeToggle" class="icon-btn" aria-label="Toggle Theme">
+            <!-- Sun/Moon icon injected by JS -->
+          </button>
         </div>
-        <div class="stats">
-          <span id="itemsLeft">0 items left</span>
-        </div>
-      </div>
 
-      <ul id="taskList" class="task-list">
-        <!-- Tasks will be injected here -->
-      </ul>
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Search tasks..." />
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+
+        <nav class="nav-links">
+          <button class="nav-btn active" data-view="all">
+            <span class="icon">📋</span> All Tasks
+          </button>
+          <button class="nav-btn" data-view="today">
+            <span class="icon">📅</span> Today
+          </button>
+          <button class="nav-btn" data-view="upcoming">
+            <span class="icon">🔮</span> Upcoming
+          </button>
+          <div class="nav-divider"></div>
+          <p class="nav-label">Lists</p>
+          <div id="customLists">
+            <!-- Custom lists injected here -->
+          </div>
+          <button id="addListBtn" class="add-list-btn">+ New List</button>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="content-header">
+          <div class="header-titles">
+            <h1 id="currentViewTitle">All Tasks</h1>
+            <p id="currentDate" class="date-sub"></p>
+          </div>
+          <div class="view-controls">
+            <select id="sortSelect" aria-label="Sort by">
+              <option value="created">Date Created</option>
+              <option value="due">Due Date</option>
+              <option value="priority">Priority</option>
+            </select>
+          </div>
+        </header>
+
+        <div class="task-input-container">
+          <input type="text" id="quickTaskInput" placeholder="Add a task to 'All Tasks'..." />
+          <div class="input-actions">
+            <!-- Priority Selector (Simple) -->
+            <select id="quickPriority" aria-label="Select priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+            <button id="quickAddBtn" class="primary-btn">Add</button>
+          </div>
+        </div>
+
+        <div class="tasks-container">
+          <ul id="taskList" class="task-list">
+            <!-- Tasks -->
+          </ul>
+        </div>
+      </main>
+
+      <!-- Task Detail Modal -->
+      <dialog id="taskModal" class="modal">
+        <div class="modal-content">
+          <header class="modal-header">
+            <h3>Edit Task</h3>
+            <button id="closeModalBtn" class="close-btn">&times;</button>
+          </header>
+          <form id="editTaskForm">
+            <input type="hidden" name="id" />
+
+            <div class="form-group">
+              <label for="editTitle">Title</label>
+              <input type="text" id="editTitle" name="title" required />
+            </div>
+
+            <div class="form-group">
+              <label for="editDesc">Description</label>
+              <textarea id="editDesc" name="description" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="editPriority">Priority</label>
+                <select id="editPriority" name="priority">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="editDate">Due Date</label>
+                <input type="date" id="editDate" name="dueDate" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editList">List</label>
+              <select id="editList" name="listId">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+
+            <footer class="modal-footer">
+              <button type="button" id="deleteTaskBtn" class="danger-btn">Delete</button>
+              <button type="submit" class="primary-btn">Save Changes</button>
+            </footer>
+          </form>
+        </div>
+      </dialog>
+
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
+
 </html>
