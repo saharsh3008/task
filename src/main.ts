@@ -4,7 +4,7 @@ import { TaskStore } from './store';
 import type { Task } from './store';
 
 // Initialize Store
-let store: TaskStore;
+let store: TaskStore = null!;
 try {
   store = new TaskStore();
 } catch (e) {
@@ -62,6 +62,14 @@ const updateDate = () => {
 // --- Calendar ---
 let displayedMonth = new Date();
 
+// New DOM Elements
+const mobileCalendarTrigger = document.getElementById('mobileCalendarTrigger') as HTMLButtonElement;
+const mobileCalendarModal = document.getElementById('mobileCalendarModal') as HTMLDialogElement;
+const closeMobileCalendarBtn = document.getElementById('closeMobileCalendarBtn') as HTMLButtonElement;
+const mobileCalendarContainer = document.getElementById('mobileCalendarContainer') as HTMLDivElement;
+
+// ...
+
 const renderCalendar = () => {
   const year = displayedMonth.getFullYear();
   const month = displayedMonth.getMonth();
@@ -82,9 +90,9 @@ const renderCalendar = () => {
 
   let html = `
         <div class="calendar-header">
-            <button class="calendar-nav-btn" id="prevMonth">&lt;</button>
+            <button class="calendar-nav-btn prev-month-btn">&lt;</button>
             <span class="calendar-month">${displayedMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
-            <button class="calendar-nav-btn" id="nextMonth">&gt;</button>
+            <button class="calendar-nav-btn next-month-btn">&gt;</button>
         </div>
         <div class="calendar-grid">
             <div class="calendar-day-header">S</div>
@@ -118,26 +126,40 @@ const renderCalendar = () => {
   }
 
   html += `</div>`;
-  miniCalendar.innerHTML = html;
 
-  // Listeners
-  miniCalendar.querySelector('#prevMonth')?.addEventListener('click', () => {
-    displayedMonth.setMonth(displayedMonth.getMonth() - 1);
-    renderCalendar();
-  });
-  miniCalendar.querySelector('#nextMonth')?.addEventListener('click', () => {
-    displayedMonth.setMonth(displayedMonth.getMonth() + 1);
-    renderCalendar();
-  });
-  miniCalendar.querySelectorAll('.calendar-day[data-date]').forEach(el => {
-    el.addEventListener('click', () => {
-      const date = new Date(el.getAttribute('data-date')!);
-      currentDateFilter = date;
-      currentView = 'date-view';
-      currentListId = undefined;
-      updateViewHeader();
-      renderCalendar(); // To update selection style
-      renderTasks();
+  // Render to both containers
+  const containers = [miniCalendar, mobileCalendarContainer];
+
+  containers.forEach(container => {
+    if (!container) return;
+    container.innerHTML = html;
+
+    // Listeners (scoped to container)
+    // Note: we use class selectors since IDs might be duplicated if we used them in HTML string
+    container.querySelector('.prev-month-btn')?.addEventListener('click', () => {
+      displayedMonth.setMonth(displayedMonth.getMonth() - 1);
+      renderCalendar();
+    });
+    container.querySelector('.next-month-btn')?.addEventListener('click', () => {
+      displayedMonth.setMonth(displayedMonth.getMonth() + 1);
+      renderCalendar();
+    });
+
+    container.querySelectorAll('.calendar-day[data-date]').forEach(el => {
+      el.addEventListener('click', () => {
+        const date = new Date(el.getAttribute('data-date')!);
+        currentDateFilter = date;
+        currentView = 'date-view';
+        currentListId = undefined;
+        updateViewHeader();
+        renderCalendar(); // To update selection style
+        renderTasks();
+
+        // If mobile modal is open, close it
+        if (mobileCalendarModal && mobileCalendarModal.getAttribute('open') !== null) {
+          mobileCalendarModal.close();
+        }
+      });
     });
   });
 };
@@ -473,6 +495,25 @@ const setupEventListeners = () => {
   taskModal.addEventListener('click', (e) => {
     if (e.target === taskModal) taskModal.close();
   });
+
+  // Mobile Calendar
+  if (mobileCalendarTrigger) {
+    mobileCalendarTrigger.addEventListener('click', () => {
+      // Ensure calendar is up to date when opening
+      renderCalendar();
+      mobileCalendarModal.showModal();
+    });
+  }
+
+  if (closeMobileCalendarBtn) {
+    closeMobileCalendarBtn.addEventListener('click', () => mobileCalendarModal.close());
+  }
+
+  if (mobileCalendarModal) {
+    mobileCalendarModal.addEventListener('click', (e) => {
+      if (e.target === mobileCalendarModal) mobileCalendarModal.close();
+    });
+  }
 };
 
 // Wrap init

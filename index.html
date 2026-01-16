@@ -66,6 +66,9 @@
             <p id="currentDate" class="date-sub"></p>
           </div>
           <div class="view-controls">
+            <button id="mobileCalendarTrigger" class="icon-btn mobile-only" aria-label="Open Calendar">
+              📅
+            </button>
             <select id="sortSelect" aria-label="Sort by">
               <option value="created">Date Created</option>
               <option value="due">Due Date</option>
@@ -146,6 +149,17 @@
               <button type="submit" class="primary-btn">Save Changes</button>
             </footer>
           </form>
+        </div>
+      </dialog>
+
+      <!-- Mobile Calendar Modal -->
+      <dialog id="mobileCalendarModal" class="modal">
+        <div class="modal-content calendar-modal-content">
+          <header class="modal-header">
+            <h3>Calendar</h3>
+            <button id="closeMobileCalendarBtn" class="close-btn">&times;</button>
+          </header>
+          <div id="mobileCalendarContainer"></div>
         </div>
       </dialog>
 
