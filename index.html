@@ -34,6 +34,11 @@
           </svg>
         </div>
 
+        <!-- Calendar -->
+        <div id="miniCalendar" class="mini-calendar">
+          <!-- Injected by JS -->
+        </div>
+
         <nav class="nav-links">
           <button class="nav-btn active" data-view="all">
             <span class="icon">📋</span> All Tasks
@@ -122,6 +127,11 @@
                 <label for="editDate">Due Date</label>
                 <input type="date" id="editDate" name="dueDate" />
               </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editReminder">Set Reminder</label>
+              <input type="datetime-local" id="editReminder" name="reminder" />
             </div>
 
             <div class="form-group">

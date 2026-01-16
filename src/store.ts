@@ -8,6 +8,8 @@ export interface Task {
     completed: boolean;
     priority: Priority;
     dueDate?: number; // timestamp
+    completedAt?: number; // timestamp
+    reminder?: number; // timestamp
     listId: string;
     createdAt: number;
     updatedAt: number;
@@ -106,7 +108,11 @@ export class TaskStore {
     toggleTask(id: string): void {
         const task = this.getTask(id);
         if (task) {
-            this.updateTask(id, { completed: !task.completed });
+            const isCompleted = !task.completed;
+            this.updateTask(id, {
+                completed: isCompleted,
+                completedAt: isCompleted ? Date.now() : undefined
+            });
         }
     }
 
