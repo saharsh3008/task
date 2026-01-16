@@ -138,13 +138,17 @@
             </div>
 
             <div class="form-group">
-              <label for="editRecurrence">Recurrence</label>
-              <select id="editRecurrence" name="recurrence">
-                <option value="none">None</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+              <label>Recurrence</label>
+              <div id="recurrenceDays" class="recurrence-days">
+                <button type="button" class="day-btn" data-day="0">S</button>
+                <button type="button" class="day-btn" data-day="1">M</button>
+                <button type="button" class="day-btn" data-day="2">T</button>
+                <button type="button" class="day-btn" data-day="3">W</button>
+                <button type="button" class="day-btn" data-day="4">T</button>
+                <button type="button" class="day-btn" data-day="5">F</button>
+                <button type="button" class="day-btn" data-day="6">S</button>
+              </div>
+              <input type="hidden" name="recurrenceDays" id="editRecurrenceInput" />
             </div>
 
             <!-- Subtasks Section -->

@@ -769,3 +769,38 @@ body {
   font-size: 1.2rem;
   line-height: 1;
 }
+/* Recurrence Days */
+.recurrence-days {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.25rem;
+}
+
+.day-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+
+.day-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+}
+
+.day-btn.selected {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+

@@ -1,6 +1,4 @@
-
 export type Priority = 'low' | 'medium' | 'high';
-export type Recurrence = 'daily' | 'weekly' | 'monthly' | 'none';
 
 export interface Subtask {
     id: string;
@@ -17,7 +15,7 @@ export interface Task {
     dueDate?: number; // timestamp
     completedAt?: number; // timestamp
     reminder?: number; // timestamp
-    recurrence?: Recurrence;
+    recurrenceDays?: number[]; // 0-6 (Sun-Sat), empty = no recurrence
     subtasks?: Subtask[];
     listId: string;
     createdAt: number;
@@ -149,7 +147,7 @@ export class TaskStore {
             const isCompleted = !task.completed;
 
             // Handle Recurrence on Completion
-            if (isCompleted && task.recurrence && task.recurrence !== 'none') {
+            if (isCompleted && task.recurrenceDays && task.recurrenceDays.length > 0) {
                 this.handleRecurrence(task);
             }
 
@@ -163,21 +161,27 @@ export class TaskStore {
     private handleRecurrence(task: Task) {
         if (!task.dueDate) return;
 
-        let nextDate = new Date(task.dueDate);
-        if (task.recurrence === 'daily') nextDate.setDate(nextDate.getDate() + 1);
-        if (task.recurrence === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-        if (task.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+        const currentDueDate = new Date(task.dueDate);
+        const searchDate = new Date(currentDueDate);
+        searchDate.setDate(searchDate.getDate() + 1); // Start ensuring it's in the future
 
-        // Clone task
-        this.addTask({
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            listId: task.listId,
-            dueDate: nextDate.getTime(),
-            recurrence: task.recurrence,
-            subtasks: task.subtasks?.map(s => ({ ...s, completed: false })) // Reset subtasks
-        });
+        for (let i = 0; i < 365; i++) {
+            const dayOfWeek = searchDate.getDay();
+            if (task.recurrenceDays!.includes(dayOfWeek)) {
+                // Found next match
+                this.addTask({
+                    title: task.title,
+                    description: task.description,
+                    priority: task.priority,
+                    listId: task.listId,
+                    dueDate: searchDate.getTime(),
+                    recurrenceDays: task.recurrenceDays,
+                    subtasks: task.subtasks?.map(s => ({ ...s, completed: false }))
+                });
+                return;
+            }
+            searchDate.setDate(searchDate.getDate() + 1);
+        }
     }
 
     // Subtask Management
